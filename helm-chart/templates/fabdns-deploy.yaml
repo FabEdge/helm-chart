@@ -1,0 +1,82 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ .Values.fabDNS.name }}
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "fabDNS.labels" . | nindent 4 }}
+spec:
+  replicas:  {{ .Values.fabDNS.replicas }}
+  selector:
+    matchLabels:
+      {{- include "fabDNS.labels" . | nindent 6 }}
+  strategy:
+    {{- toYaml .Values.fabDNS.strategy | nindent 4 }}
+  template:
+    metadata:
+      labels:
+        {{- include "fabDNS.labels" . | nindent 8 }}
+    spec:
+      containers:
+      - name: {{ .Values.fabDNS.name }}
+        image: {{ .Values.fabDNS.image.repository }}:{{ .Values.fabDNS.image.tag }}
+        imagePullPolicy: {{ .Values.fabDNS.image.pullPolicy }}
+        args:
+        - -conf
+        - /etc/fabdns/Corefile
+        livenessProbe:
+          failureThreshold: 5
+          httpGet:
+            path: /health
+            port: 8080
+            scheme: HTTP
+          initialDelaySeconds: 60
+          periodSeconds: 10
+          successThreshold: 1
+          timeoutSeconds: 5
+        readinessProbe:
+          failureThreshold: 3
+          httpGet:
+            path: /ready
+            port: 8181
+            scheme: HTTP
+          periodSeconds: 10
+          successThreshold: 1
+          timeoutSeconds: 1
+        ports:
+        - containerPort: 53
+          name: dns-udp
+          protocol: UDP
+        - containerPort: 53
+          name: dns-tcp
+          protocol: TCP
+        resources:
+          limits:
+            memory: 170Mi
+          requests:
+            cpu: 100m
+            memory: 70Mi
+        volumeMounts:
+        - mountPath: /etc/fabdns
+          name: config-volume
+          readOnly: true
+      dnsPolicy: Default
+      restartPolicy: Always
+      serviceAccountName: {{ .Values.fabDNS.name }}
+      affinity:
+        nodeAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            nodeSelectorTerms:
+              - matchExpressions:
+                  {{- range .Values.cluster.edgeLabels }}
+                  - key: {{ index (regexSplit "=" . -1) 0 }}
+                    operator: DoesNotExist
+                  {{- end }}
+      volumes:
+      - configMap:
+          defaultMode: 420
+          items:
+          - key: Corefile
+            path: Corefile
+          name: {{ .Values.fabDNS.name }}
+        name: config-volume
