@@ -1,0 +1,81 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ .Values.serviceHub.name }}
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "serviceHub.labels" . | nindent 4 }}
+spec:
+  replicas: {{ .Values.serviceHub.replicas }}
+  selector:
+    matchLabels:
+      {{- include "serviceHub.labels" . | nindent 6 }}
+  strategy:
+    {{- toYaml .Values.serviceHub.strategy | nindent 4 }}
+  template:
+    metadata:
+      labels:
+        {{- include "serviceHub.labels" . | nindent 8 }}
+    spec:
+      containers:
+        - name: {{ .Values.serviceHub.name }}
+          image: {{ .Values.serviceHub.image.repository }}:{{ .Values.serviceHub.image.tag }}
+          imagePullPolicy: {{ .Values.serviceHub.image.pullPolicy }}
+          args:
+            - --mode={{ .Values.serviceHub.mode }}
+            - --cluster={{ .Values.cluster.name }}
+            - --zone={{ .Values.cluster.zone }}
+            - --region={{ .Values.cluster.region }}
+            {{- if eq .Values.serviceHub.mode "client" }}
+            - --api-server-address={{ .Values.cluster.serverServiceHubAPIServer }}
+            {{- end }}
+            - --tls-key-file=/etc/fabedge/tls.key
+            - --tls-cert-file=/etc/fabedge/tls.crt
+            - --tls-ca-cert-file=/etc/fabedge/ca.crt
+          ports:
+            - containerPort: 3000
+              name: apiserver
+            - containerPort: 3001
+              name: health
+          volumeMounts:
+            - name: tls
+              mountPath: /etc/fabedge/
+          readinessProbe:
+            httpGet:
+              port: 3001
+              scheme: HTTP
+              path: "/readyz/ping"
+            initialDelaySeconds: 10
+            periodSeconds: 10
+            timeoutSeconds: 30
+            failureThreshold: 3
+          livenessProbe:
+            httpGet:
+              port: 3001
+              scheme: HTTP
+              path: "/readyz/ping"
+            initialDelaySeconds: 10
+            periodSeconds: 10
+            timeoutSeconds: 30
+            failureThreshold: 3
+      serviceAccountName: {{ .Values.fabDNS.name }}
+      affinity:
+        nodeAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            nodeSelectorTerms:
+              - matchExpressions:
+                  {{- range .Values.cluster.edgeLabels }}
+                  - key: {{ index (regexSplit "=" . -1) 0 }}
+                    operator: DoesNotExist
+                  {{- end }}
+      volumes:
+        - name: tls
+          secret:
+            items:
+                - key: tls.crt
+                  path: tls.crt
+                - key: tls.key
+                  path: tls.key
+                - key: ca.crt
+                  path: ca.crt
+            secretName: service-hub-tls
