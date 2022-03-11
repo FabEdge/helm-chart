@@ -35,7 +35,7 @@ serviceHub:
   image:
     repository: fabedge/service-hub
     pullPolicy: IfNotPresent
-    tag: v0.1.alpha
+    tag: v0.1.0
 
 fabDNS:
   name: fabdns
@@ -48,7 +48,7 @@ fabDNS:
   image:
     repository: fabedge/fabdns
     pullPolicy: IfNotPresent
-    tag: v0.1.alpha
+    tag: v0.1.0
 
 
 operator:
