@@ -6,8 +6,8 @@ function usage() {
     echo "Deploy fabedge."
     echo ""
     echo "examples:"
-    echo "curl 116.62.127.76/install.sh | bash -s -- --cluster-name beijing  --cluster-role host --cluster-zone beijing  --cluster-region haidian --edges edge1 --connectors node1 --connector-public-addresses 10.22.46.32 --chart http://116.62.127.76/fabedge-0.5.0.tgz"
-    echo "curl 116.62.127.76/install.sh | bash -s -- --cluster-name openyurt2 --cluster-role member --cluster-zone beijing  --cluster-region haidian --edges edge1 --connectors node1 --chart http://116.62.127.76/fabedge-0.5.0.tgz --server-serviceHub-api-server https://10.22.46.47:30304 --host-operator-api-server https://10.22.46.47:30303 --connector-public-addresses 10.22.46.26 --init-token ey...Jh"
+    echo "curl 116.62.127.76/installer/latest/install.sh  | bash -s -- --cluster-name beijing  --cluster-role host --cluster-zone beijing  --cluster-region haidian --connectors node1 --connector-public-addresses 10.22.46.32 --chart http://116.62.127.76/fabedge-0.5.0.tgz"
+    echo "curl 116.62.127.76/installer/latest/install.sh  | bash -s -- --cluster-name openyurt2 --cluster-role member --cluster-zone beijing  --cluster-region haidian --connectors node1 --chart http://116.62.127.76/fabedge-0.5.0.tgz --server-serviceHub-api-server https://10.22.46.47:30304 --host-operator-api-server https://10.22.46.47:30303 --connector-public-addresses 10.22.46.26 --init-token ey...Jh"
     echo ""
     echo "common options:"
     echo "  --cluster-name <string>: The cluster name must be unique."
@@ -16,7 +16,6 @@ function usage() {
     echo "  --cluster-zone <string>: service-hub zone"
     echo "  --cluster-cidr <string>: kubernetes --cluster-cidr"
     echo "  --service-cluster-ip-range <string>: kubernetes --service-cluster-ip-range"
-    echo "  --edges []: node name"
     echo "  --edge-labels []: To label all edge node. default: node-role.kubernetes.io/edge="
     echo "  --connectors []: node name"
     echo "  --connector-labels []: To label all connector node. default: node-role.kubernetes.io/connector="
@@ -166,10 +165,6 @@ function validateArgs() {
         error=1
         echo 'required option "--service-cluster-ip-range" not set'
     fi
-    if [ x"$edges" == x ]; then
-        error=1
-        echo 'required option "--edges" not set'
-    fi
     if [ x"$connectors" == x ]; then
         error=1
         echo 'required option "--connectors" not set'
@@ -256,11 +251,6 @@ function parseArgs() {
                 connectorLabels=($(echo $2 | sed 's/,/ /g'))
                 shift 2
                 ;;
-            --edges)
-                # for edge in ${edges[*]}
-                edges=($(echo $2 | sed 's/,/ /g'))
-                shift 2
-                ;;
             --connectors)
                 connectors=($(echo $2 | sed 's/,/ /g'))
                 shift 2
@@ -323,11 +313,6 @@ function installHelm() {
 }
 
 function labelNodes() {
-    for edge in ${edges[*]}; do
-        for label in ${edgeLabels[*]}; do
-            kubectl label node --overwrite=true $edge $label
-        done
-    done
     for connector in ${connectors[*]}; do
         for label in ${connectorLabels[*]}; do
             kubectl label node --overwrite=true $connector $label
