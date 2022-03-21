@@ -1,0 +1,36 @@
+name: build
+
+on:
+  workflow_dispatch:
+  push:
+    tags:
+      - 'v*'
+    branches:
+      - 'v*'
+    paths-ignore:
+      - 'docs/**'
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v2
+
+    - name: Upload
+      run: |
+        mkdir $HOME/.ssh
+        echo "$KEY" > $HOME/.ssh/id_rsa
+        chmod 0600 $HOME/.ssh/id_rsa
+        curl -fsSL https://raw.githubusercontent.com/helm/helm/main/scripts/get-helm-3 | bash -
+        helm package helm-chart
+        ssh -p $PORT -o StrictHostKeyChecking=no $USERNAME@$HOST mkdir -p /var/www/html/installer/latest/
+        ssh -p $PORT -o StrictHostKeyChecking=no $USERNAME@$HOST mkdir -p /var/www/html/installer/${GITHUB_REF##*/}/
+        scp -P $PORT -o StrictHostKeyChecking=no fabedge-*.tgz $USERNAME@$HOST:/var/www/html/
+        scp -P $PORT -o StrictHostKeyChecking=no scripts/* $USERNAME@$HOST:/var/www/html/installer/latest/
+        scp -P $PORT -o StrictHostKeyChecking=no scripts/* $USERNAME@$HOST:/var/www/html/installer/${GITHUB_REF##*/}/
+      env:
+        USERNAME: ${{ secrets.SERVER_USERNAME }}
+        HOST: ${{ secrets.SERVER_HOST }}
+        PORT: ${{ secrets.SERVER_PORT }}
+        KEY: ${{ secrets.SERVER_KEY }}

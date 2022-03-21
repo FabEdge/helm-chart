@@ -1,0 +1,151 @@
+cluster:
+  name: beijing
+  role: member
+  region: beijing
+  zone: haidian
+
+  # CIDR used by pods on edge nodes, modify it per your env.
+  cidr: 10.10.0.0/16
+
+  # CIDR used by service in the cloud k8s cluster
+  serviceClusterIPRange: 10.233.0.0/18
+
+  # ip of connector accessible by the edge node
+  connectorPublicAddresses:
+  - 10.22.46.48
+
+  # client
+  hostOperatorAPIServer: https://1.1.1.1:30303
+  serverServiceHubAPIServer: https://1.1.1.1:30000
+  initToken: 123456
+
+  edgeLabels:
+  - node-role.kubernetes.io/edge
+  connectorLabels:
+  - node-role.kubernetes.io/connector
+
+serviceHub:
+  name: service-hub
+  mode: client
+  service:
+    nodePort: 30000
+  replicas: 1
+  strategy:
+    type: Recreate
+  image:
+    repository: fabedge/service-hub
+    pullPolicy: IfNotPresent
+    tag: v0.1.0
+
+fabDNS:
+  name: fabdns
+  replicas: 1
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 25%
+      maxUnavailable: 1
+  image:
+    repository: fabedge/fabdns
+    pullPolicy: IfNotPresent
+    tag: v0.1.0
+
+
+operator:
+  name: fabedge-operator
+  replicas: 1
+  image:
+    repository: fabedge/operator
+    pullPolicy: IfNotPresent
+    # tag:  # default: AppVersion
+
+  service:
+    nodePort: 30303
+
+  # enable masquerade when edge pods access Internet
+  masqOutgoing: true
+
+  ## Ref: http://kubernetes.io/docs/user-guide/compute-resources/
+  #resources: {}
+  #  limits:
+  #    cpu: 10m
+  #    memory: 32Mi
+  #  requests:
+  #    cpu: 10m
+  #    memory: 32Mi
+
+connector:
+  name: fabedge-connector
+  replicas: 1
+  image:
+    repository: fabedge/connector
+    pullPolicy: IfNotPresent
+    # tag:  # default: AppVersion
+
+  syncPeriod: 1m
+
+  strategy:
+    type: Recreate
+
+  ## Ref: http://kubernetes.io/docs/user-guide/compute-resources/
+  #resources: {}
+  #  limits:
+  #    cpu: 10m
+  #    memory: 32Mi
+  #  requests:
+  #    cpu: 10m
+  #    memory: 32Mi
+
+
+strongswan:
+  image:
+    repository: fabedge/strongswan
+    pullPolicy: IfNotPresent
+    tag: 5.9.1
+
+  ## Ref: http://kubernetes.io/docs/user-guide/compute-resources/
+  #resources: {}
+  #  limits:
+  #    cpu: 10m
+  #    memory: 32Mi
+  #  requests:
+  #    cpu: 10m
+  #    memory: 32Mi
+
+
+agent:
+  image:
+    repository: fabedge/agent
+    pullPolicy: IfNotPresent
+    # tag:  # default: AppVersion
+
+  ## Ref: http://kubernetes.io/docs/user-guide/compute-resources/
+  #resources: {}
+  #  limits:
+  #    cpu: 10m
+  #    memory: 32Mi
+  #  requests:
+  #    cpu: 10m
+  #    memory: 32Mi
+
+cert:
+  name: cert
+  image:
+    repository: fabedge/cert
+    pullPolicy: IfNotPresent
+    # tag:  # default: AppVersion
+
+cloudAgent:
+  name: fabedge-cloud-agent
+  image:
+    repository: fabedge/cloud-agent
+    pullPolicy: IfNotPresent
+    # tag:  # default: AppVersion
+
+  resources:
+    limits:
+      cpu: 100m
+      memory: 64Mi
+    requests:
+      cpu: 100m
+      memory: 64Mi

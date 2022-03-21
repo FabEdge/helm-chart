@@ -1,0 +1,41 @@
+apiVersion: apps/v1
+kind: DaemonSet
+metadata:
+  name: {{ .Values.cloudAgent.name }}
+  namespace: {{ .Release.Namespace }}
+spec:
+  selector:
+    matchLabels:
+      {{- include "cloudAgent.labels" . | nindent 6 }}
+  template:
+    metadata:
+      labels:
+        {{- include "cloudAgent.labels" . | nindent 8 }}
+    spec:
+      affinity:
+        nodeAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            nodeSelectorTerms:
+              - matchExpressions:
+                  {{- range .Values.cluster.edgeLabels }}
+                  - key: {{ index (regexSplit "=" . -1) 0 }}
+                    operator: DoesNotExist
+                  {{- end }}
+                  {{- range .Values.cluster.connectorLabels }}
+                  - key: {{ index (regexSplit "=" . -1) 0 }}
+                    operator: DoesNotExist
+                  {{- end }}
+      containers:
+        - args:
+            - --connector-node-addresses={{ include "connector.node.addresses" . }}
+            - -v=5
+          image: {{ .Values.cloudAgent.image.repository }}:{{ .Values.cloudAgent.image.tag | default .Chart.AppVersion }}
+          imagePullPolicy: {{ .Values.cloudAgent.image.pullPolicy }}
+          name: {{ .Values.cloudAgent.name }}
+          {{- if .Values.cloudAgent.resources }}
+          resources:
+            {{- toYaml .Values.cloudAgent.resources | nindent 12 }}
+          {{- end }}
+          securityContext:
+            privileged: true
+      hostNetwork: true
