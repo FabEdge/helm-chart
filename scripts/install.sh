@@ -94,12 +94,12 @@ function getK3sInfo() {
                if [[ $key == --cluster-cidr ]];
                then
                    let i++
-                   clusterCIDR=${args[$i]}
+                   clusterCIDR=$(echo ${args[$i]} | sed 's/\"//g' | sed $'s/\'//g')
                fi
                if [[ $key == --service-cidr ]];
                then
                    let i++
-                   serviceClusterIPRange=${args[$i]}
+                   serviceClusterIPRange=$(echo ${args[$i]} | sed 's/\"//g' | sed $'s/\'//g')
                fi
            done
        fi
