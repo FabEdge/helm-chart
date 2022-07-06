@@ -1,55 +1,52 @@
 cluster:
-  name: beijing
-  role: member
-  region: beijing
-  zone: haidian
+  # The name of cluster, must be unique among all clusters and be a valid dns name(RFC 1123)
+  name: ""
+  # The role of cluster, possible values are: host, member
+  role: host
+  # The region where the cluster is located, a region name may contain the letters ‘a-z’ or ’A-Z’ or digits 0-9
+  region: ""
+  # The zone where the cluster is located, a zone name may contain the letters ‘a-z’ or ’A-Z’ or digits 0-9
+  zone: ""
+
+  # The CNI name in your kubernetes cluster, at present, only options are: flannel, calico
+  # cniType: "flannel"
 
   # CIDR used by pods on edge nodes, modify it per your env.
-  cidr: 10.10.0.0/16
+  # Specify range of IPv4 addresses for the edge pod. If set, fabedge-operator will automatically allocate CIDRs for every edge node, configure this when you use Calico and want to use IPv4
+  edgePodCIDR: ""
+  # Set the mask size for IPv4 edge node cidr in dual-stack cluster
+  edgeCIDRMaskSize: 24
 
-  # CIDR used by service in the cloud k8s cluster
-  serviceClusterIPRange: 10.233.0.0/18
+  # Specify range of IPv6 addresses for the edge pod. If set, fabedge-operator will automatically allocate CIDRs for every edge node, configure this when you use Calico and want to use IPv6
+  edgePodCIDR6: ""
+  # Set the mask size for IPv6 edge node cidr in dual-stack cluster
+  edgeCIDRMaskSize6: 64
 
-  # ip of connector accessible by the edge node
-  connectorPublicAddresses:
-  - 10.22.46.48
+  # CIDR used by service in the cluster
+  serviceClusterIPRange: []
 
-  # client
-  hostOperatorAPIServer: https://1.1.1.1:30303
-  serverServiceHubAPIServer: https://1.1.1.1:30000
-  initToken: 123456
+  # public IP addresses of connector accessible by the edge node
+  connectorPublicAddresses: []
+  # the internal IP addresses of connector nodes, prefer IPv4.
+  connectorNodeAddresses: []
 
+  # The addresses will be used generate TLS certificates used by operator server and service hub server.
+  # Provide it if your cluster is host cluster. When publicAddresses is empty, we use connector's public addresses
+  publicAddresses: []
+
+  # The address of host cluster's operator API server
+  operatorAPIServer: https://1.1.1.1:30303
+  # The address of host cluster's servicehub API server
+  serviceHubAPIServer: https://1.1.1.1:30000
+  # The token used to initialize TLS cert for API client
+  initToken: ""
+
+  # Labels to find edge nodes, e.g. key2=, key3=value3
   edgeLabels:
-  - node-role.kubernetes.io/edge
+    - node-role.kubernetes.io/edge=
+  # The labels to find connector nodes
   connectorLabels:
-  - node-role.kubernetes.io/connector
-
-serviceHub:
-  name: service-hub
-  mode: client
-  service:
-    nodePort: 30000
-  replicas: 1
-  strategy:
-    type: Recreate
-  image:
-    repository: fabedge/service-hub
-    pullPolicy: IfNotPresent
-    tag: v0.1.0
-
-fabDNS:
-  name: fabdns
-  replicas: 1
-  strategy:
-    type: RollingUpdate
-    rollingUpdate:
-      maxSurge: 25%
-      maxUnavailable: 1
-  image:
-    repository: fabedge/fabdns
-    pullPolicy: IfNotPresent
-    tag: v0.1.0
-
+    - node-role.kubernetes.io/connector=
 
 operator:
   name: fabedge-operator
@@ -57,13 +54,26 @@ operator:
   image:
     repository: fabedge/operator
     pullPolicy: IfNotPresent
-    # tag:  # default: AppVersion
+    # Overrides the image tag whose default is the chart appVersion.
+    tag:  ""
 
   service:
     nodePort: 30303
 
-  # enable masquerade when edge pods access Internet
-  masqOutgoing: true
+  # number for the log level verbosity
+  logLevel: 3
+
+  # The ID format of certificate for each tunnel endpoint
+  # endpointIDFormat: "C=CN, O=fabedge.io, CN={node}"
+
+  # The organization name for generated certificate
+  # certOrgName: fabedge.io
+
+  # The validity period for agent's cert
+  # certValidityPeriod: 3650
+
+  # The validity duration of token for child cluster to initialize
+  # tokenValidPeriod: "12h"
 
   ## Ref: http://kubernetes.io/docs/user-guide/compute-resources/
   #resources: {}
@@ -76,13 +86,16 @@ operator:
 
 connector:
   name: fabedge-connector
-  replicas: 1
   image:
     repository: fabedge/connector
     pullPolicy: IfNotPresent
-    # tag:  # default: AppVersion
+    # Overrides the image tag whose default is the chart appVersion.
+    tag:  ""
 
-  syncPeriod: 1m
+  # period to sync routes/rules
+  syncPeriod: "1m"
+  # number for the log level verbosity
+  logLevel: 3
 
   strategy:
     type: Recreate
@@ -96,12 +109,11 @@ connector:
   #    cpu: 10m
   #    memory: 32Mi
 
-
 strongswan:
   image:
     repository: fabedge/strongswan
     pullPolicy: IfNotPresent
-    tag: 5.9.1
+    tag: "5.9.1"
 
   ## Ref: http://kubernetes.io/docs/user-guide/compute-resources/
   #resources: {}
@@ -112,12 +124,27 @@ strongswan:
   #    cpu: 10m
   #    memory: 32Mi
 
-
 agent:
   image:
     repository: fabedge/agent
     pullPolicy: IfNotPresent
-    # tag:  # default: AppVersion
+    # Overrides the image tag whose default is the chart appVersion.
+    # tag: ""
+
+  args:
+    # number for the log level verbosity
+    LOG_LEVEL: "3"
+    # Configure faberge networking to perform outbound NAT for connections from pods to outside of the cluster
+    MASQ_OUTGOING: "true"
+    # Enable the proxy feature
+    ENABLE_PROXY: "false"
+    # ENABLE_HAIRPINMODE: "true"
+    # Enable auto-networking which will find endpoints in the same LAN
+    # AUTO_NETWORKING: "false"
+    # Token used for multicasting endpoint, this is required if AUTO_NETWORKING is true
+    # MULTICAST_TOKEN: ""
+    # The multicast address to exchange endpoints, this is required if AUTO_NETWORKING is true
+    # MULTICAST_ADDRESS: "239.40.20.81:18080"
 
   ## Ref: http://kubernetes.io/docs/user-guide/compute-resources/
   #resources: {}
@@ -129,18 +156,22 @@ agent:
   #    memory: 32Mi
 
 cert:
-  name: cert
+  name: gen-cert
   image:
     repository: fabedge/cert
     pullPolicy: IfNotPresent
-    # tag:  # default: AppVersion
+    tag:  v0.5.0
 
 cloudAgent:
   name: fabedge-cloud-agent
   image:
     repository: fabedge/cloud-agent
     pullPolicy: IfNotPresent
-    # tag:  # default: AppVersion
+    # Overrides the image tag whose default is the chart appVersion.
+    tag:  ""
+
+  # number for the log level verbosity
+  logLevel: 3
 
   resources:
     limits:
@@ -149,3 +180,43 @@ cloudAgent:
     requests:
       cpu: 100m
       memory: 64Mi
+
+fabDNS:
+  # set to true to create serviceHub and fabDNS
+  create: false
+  name: fabdns
+  replicas: 1
+  image:
+    repository: fabedge/fabdns
+    pullPolicy: IfNotPresent
+    tag: v0.2.0
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 25%
+      maxUnavailable: 1
+
+serviceHub:
+  name: service-hub
+
+  # Determine if service-hub are allowed to create namespace if needed
+  allowCreateNamespace: true
+  # Expiration time after cluster stops heartbeat
+  # clusterExpireDuration: "5m"
+  # The interval between each service importing routine
+  # serviceImportInterval: "1m"
+  # Timeout for kubernetes API request
+  # requestTimeout: "5s"
+
+  replicas: 1
+
+  image:
+    repository: fabedge/service-hub
+    pullPolicy: IfNotPresent
+    tag: v0.2.0
+
+  service:
+    nodePort: 30000
+
+  strategy:
+    type: Recreate

@@ -1,3 +1,4 @@
+{{- if or (eq .Values.cluster.role "host") .Values.fabDNS.create }}
 ---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
@@ -11,49 +12,16 @@ rules:
   - apiGroups:
       - ""
     resources:
-      - nodes
-      - services
-    verbs:
-      - get
-      - list
-      - watch
-  - apiGroups:
-      - ""
-    resources:
-      - nodes
-    verbs:
-      - update
-  - apiGroups:
-      - ""
-    resources:
-      - pods
-      - configmaps
       - secrets
     verbs:
-      - get
-      - list
-      - watch
-      - create
-      - update
-      - patch
-      - delete
-  - apiGroups:
-      - ""
-    resources:
-      - pods/status
-      - configmaps/status
-      - secrets/status
-    verbs:
-      - get
-      - update
-      - patch
-
+      - "*"
 ---
+
 apiVersion: v1
 kind: ServiceAccount
 metadata:
-  name: {{ .Values.cert.name }}
-  namespace: {{ .Release.Namespace }}
+  name: {{ .Values.cert.name | quote }}
+  namespace: {{ .Release.Namespace | quote }}
   annotations:
     "helm.sh/hook": pre-install,pre-upgrade
     "helm.sh/hook-delete-policy": before-hook-creation
@@ -63,7 +31,7 @@ metadata:
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRoleBinding
 metadata:
-  name: {{ .Values.cert.name }}
+  name: {{ .Values.cert.name | quote }}
   annotations:
     "helm.sh/hook": pre-install,pre-upgrade
     "helm.sh/hook-delete-policy": before-hook-creation
@@ -102,7 +70,8 @@ spec:
                 operator: Exists
               {{- end }}
       initContainers:
-      - name: cert-gen-ca
+      {{- if eq .Values.cluster.role "host" }}
+      - name: gen-ca-tls
         image: {{ .Values.cert.image.repository }}:{{ .Values.cert.image.tag | default .Chart.AppVersion }}
         imagePullPolicy: {{ .Values.cert.image.pullPolicy }}
         args:
@@ -110,43 +79,39 @@ spec:
         - ca
         - -n
         - {{ .Release.Namespace }}
-
-      {{- if eq .Values.cluster.role "host" }}
-      - name: cert-gen-api-server
+      - name: gen-operator-api-server-tls
         image: {{ .Values.cert.image.repository }}:{{ .Values.cert.image.tag | default .Chart.AppVersion }}
         imagePullPolicy: {{ .Values.cert.image.pullPolicy }}
         args:
         - gen
-        - api-server
+        - {{ .Values.operator.name }}
         - --ips
-        - {{ include "connector.node.addresses" . }}
+        - {{ include "cluster.publicAddresses" . }}
         - --secret-name
-        - api-server-tls
+        - {{ include "operator.tlsName" . }}
         - -n
         - {{ .Release.Namespace }}
       {{- end }}
-
-      - name: cert-gen-service-hub
+      {{- if .Values.fabDNS.create }}
+      - name: gen-service-hub-tls
         image: {{ .Values.cert.image.repository }}:{{ .Values.cert.image.tag | default .Chart.AppVersion }}
         imagePullPolicy: {{ .Values.cert.image.pullPolicy }}
         args:
         - gen
-        - service-hub
-        - --ips
-        - {{ include "connector.node.addresses" . }}
+        - {{ .Values.serviceHub.name }}
         - --secret-name
-        - service-hub-tls
+        - {{ include "serviceHub.tlsName" . }}
         - -n
         - {{ .Release.Namespace }}
-        {{- if eq .Values.serviceHub.mode "client" }}
-        - --remote
-        - --api-server-address={{ .Values.cluster.hostOperatorAPIServer }}
-        - --token={{ .Values.cluster.initToken }}
-        {{ else }}
+        {{- if eq (include "serviceHub.mode" .) "server" }}
         - --ips
-        - {{ include "connector.node.addresses" . }}
+        - {{ include "cluster.publicAddresses" . }}
+        {{- else }}
+        - --remote
+        - --api-server-address={{ .Values.cluster.operatorAPIServer }}
+        - --token={{ .Values.cluster.initToken }}
         {{- end }}
-
+      {{- end }}
       containers:
       - name: cert-true
         image: {{ .Values.cert.image.repository }}:{{ .Values.cert.image.tag | default .Chart.AppVersion }}
@@ -156,3 +121,4 @@ spec:
       restartPolicy: Never
       serviceAccountName: {{ .Values.cert.name }}
   backoffLimit: 1
+{{- end }}

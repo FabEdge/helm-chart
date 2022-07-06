@@ -1,3 +1,4 @@
+{{- if .Values.fabDNS.create -}}
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -22,16 +23,26 @@ spec:
           image: {{ .Values.serviceHub.image.repository }}:{{ .Values.serviceHub.image.tag }}
           imagePullPolicy: {{ .Values.serviceHub.image.pullPolicy }}
           args:
-            - --mode={{ .Values.serviceHub.mode }}
+            - --mode={{ include "serviceHub.mode" . }}
             - --cluster={{ .Values.cluster.name }}
             - --zone={{ .Values.cluster.zone }}
             - --region={{ .Values.cluster.region }}
-            {{- if eq .Values.serviceHub.mode "client" }}
-            - --api-server-address={{ .Values.cluster.serverServiceHubAPIServer }}
+            {{- if eq (include "serviceHub.mode" .) "client" }}
+            - --api-server-address={{ .Values.cluster.serviceHubAPIServer }}
             {{- end }}
             - --tls-key-file=/etc/fabedge/tls.key
             - --tls-cert-file=/etc/fabedge/tls.crt
             - --tls-ca-cert-file=/etc/fabedge/ca.crt
+            - --allow-create-namespace={{ .Values.serviceHub.allowCreateNamespace }}
+            {{- if .Values.serviceHub.clusterExpireDuration }}
+            - --cluster-expire-duration={{ .Values.serviceHub.clusterExpireDuration }}
+            {{- end }}
+            {{- if .Values.serviceHub.serviceImportInterval }}
+            - --service-import-interval={{ .Values.serviceHub.serviceImportInterval }}
+            {{- end }}
+            {{- if .Values.serviceHub.requestTimeout }}
+            - --request-timeout={{ .Values.serviceHub.requestTimeout }}
+            {{- end }}
           ports:
             - containerPort: 3000
               name: apiserver
@@ -79,3 +90,4 @@ spec:
                 - key: ca.crt
                   path: ca.crt
             secretName: service-hub-tls
+{{- end }}
