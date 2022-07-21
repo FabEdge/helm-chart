@@ -1,3 +1,4 @@
+{{- if .Values.fabDNS.create -}}
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -80,3 +81,4 @@ spec:
             path: Corefile
           name: {{ .Values.fabDNS.name }}
         name: config-volume
+{{- end }}

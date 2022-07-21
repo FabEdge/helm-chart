@@ -6,7 +6,7 @@ metadata:
   labels:
     {{- include "connector.labels" . | nindent 4 }}
 spec:
-  replicas: {{ .Values.connector.replicas }}
+  replicas: 1
   selector:
     matchLabels:
       {{- include "connector.labels" . | nindent 6 }}
@@ -40,7 +40,7 @@ spec:
       hostNetwork: true
       containers:
         - name: strongswan
-          image: {{ .Values.strongswan.image.repository }}:{{ .Values.strongswan.image.tag | default .Chart.AppVersion }}
+          image: {{ .Values.strongswan.image.repository }}:{{ .Values.strongswan.image.tag }}
           imagePullPolicy: {{ .Values.strongswan.image.pullPolicy }}
           readinessProbe:
             exec:
@@ -76,7 +76,7 @@ spec:
             - --cni-type={{ include "cniType" . }}
             - --sync-period={{ .Values.connector.syncPeriod }}
             - --connector-node-addresses={{ include "connector.node.addresses" . }}
-            - -v=5
+            - -v={{ .Values.connector.logLevel }}
           volumeMounts:
             - name: var-run
               mountPath: /var/run/

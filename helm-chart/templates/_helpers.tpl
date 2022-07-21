@@ -28,38 +28,51 @@ app: {{ .Values.cloudAgent.name }}
 release: {{ .Release.Name }}
 {{- end -}}
 
+{{- define "serviceHub.mode" -}}
+{{ (eq .Values.cluster.role "host") | ternary "server" "client" }}
+{{- end }}
+
+{{- define "cniType" -}}
+{{- .Values.cluster.cniType | default "" | lower -}}
+{{- end }}
+
+{{- define "operator.tlsName" -}}
+{{- .Values.operator.name }}-tls
+{{- end }}
+
+{{- define "serviceHub.tlsName" -}}
+{{- .Values.serviceHub.name }}-tls
+{{- end }}
+
 {{- define "connector.node.addresses" -}}
-  {{- $foundFirst := false -}}
-  {{ range $index, $node := (lookup "v1" "Node" "" "").items -}}
-    {{- if hasKey $node.metadata.labels "node-role.kubernetes.io/connector" -}}
+{{- if .Values.cluster.connectorNodeAddresses -}}
+{{ join "," .Values.cluster.connectorNodeAddresses -}}
+{{- else }}
+  {{- $ips := list -}}
+  {{- range $index, $node := (lookup "v1" "Node" "" "").items -}}
+    {{- $isConnector := true -}}
+    {{- range $_, $label := $.Values.cluster.connectorLabels -}}
+    {{- $parts := regexSplit "=" $label 2 -}}
+    {{- $key := first $parts -}}
+    {{- $value := last $parts -}}
+    {{- $isConnector = and $isConnector (hasKey $node.metadata.labels $key) (eq (get $node.metadata.labels $key) $value) -}}
+    {{- end -}}
+    {{- if $isConnector -}}
       {{- range $node.status.addresses -}}
         {{- if eq .type "InternalIP" -}}
-          {{- if $foundFirst -}},{{- end -}}
-          {{- .address -}}
-          {{- $foundFirst = true -}}
+          {{- $ips = append $ips .address -}}
         {{- end -}}
       {{- end -}}
     {{- end -}}
   {{- end -}}
+  {{- join "," $ips -}}
+{{- end }}
 {{- end }}
 
-{{- define "cniType" -}}
-  {{- if .Values.cniType -}}
-    {{- .Values.cniType -}}
-  {{- else -}}
-    {{- $cniTypeVar := "" -}}
-    {{- range $index, $pod := (lookup "v1" "Pod" "" "").items -}}
-      {{- if hasPrefix "kube-flannel" $pod.metadata.name -}}
-        {{- $cniTypeVar = "flannel" -}}
-      {{- end -}}
-      {{- if hasPrefix "calico-node" $pod.metadata.name -}}
-        {{- $cniTypeVar = "calico" -}}
-      {{- end -}}
-    {{- end }}
-    {{- if $cniTypeVar -}}
-      {{- $cniTypeVar -}}
-    {{- else -}}
-      {{- "flannel" -}}
-    {{- end -}}
-  {{- end }}
+{{- define "cluster.publicAddresses" -}}
+{{- if .Values.cluster.publicAddresses -}}
+    {{- join "," .Values.cluster.publicAddresses -}}
+{{- else -}}
+    {{- join "," .Values.cluster.connectorPublicAddresses -}}
+{{- end -}}
 {{- end }}

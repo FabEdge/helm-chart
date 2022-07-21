@@ -24,32 +24,50 @@ spec:
           args:
             - --cluster={{ .Values.cluster.name }}
             - --cluster-role={{ .Values.cluster.role }}
+            {{- if .Values.operator.endpointIDFormat }}
+            - --endpoint-id-format={{ .Values.operator.endpointIDFormat }}
+            {{- end }}
+            {{- if .Values.operator.certOrgName }}
+            - --cert-organization={{ .Values.operator.certOrgName }}
+            {{- end }}
+            {{- if .Values.operator.certValidityPeriod }}
+            - --cert-validity-period={{ .Values.operator.certValidityPeriod }}
+            {{- end }}
+            {{- if .Values.operator.tokenValidPeriod }}
+            - --token-valid-period={{ .Values.operator.tokenValidPeriod }}
+            {{- end }}
             {{- if eq .Values.cluster.role "host" }}
             - --api-server-cert-file=/etc/fabedge/tls.crt
             - --api-server-key-file=/etc/fabedge/tls.key
             - --api-server-listen-address=0.0.0.0:3030
             {{- end }}
             {{- if eq .Values.cluster.role "member" }}
-            - --api-server-address={{ .Values.cluster.hostOperatorAPIServer }}
+            - --api-server-address={{ .Values.cluster.operatorAPIServer }}
             - --init-token={{ .Values.cluster.initToken }}
             {{- end }}
-            - --edge-pod-cidr={{ .Values.cluster.cidr }}
             - --cni-type={{ include "cniType" . }}
+            {{- if eq (include "cniType" .) "calico" }}
+            - --edge-pod-cidr={{ .Values.cluster.edgePodCIDR }}
+            - --edge-cidr-mask-size={{ .Values.cluster.edgeCIDRMaskSize }}
+            {{- if .Values.cluster.edgePodCIDR6 }}
+            - --edge-pod-cidr6={{ .Values.cluster.edgePodCIDR6 }}
+            - --edge-cidr-mask-size6={{ .Values.cluster.edgeCIDRMaskSize6 }}
+            {{- end }}
+            {{- end }}
             - --agent-image={{ .Values.agent.image.repository }}:{{ .Values.agent.image.tag | default .Chart.AppVersion }}
             - --agent-strongswan-image={{ .Values.strongswan.image.repository }}:{{ .Values.strongswan.image.tag | default .Chart.AppVersion }}
             - --edge-labels={{ join "," .Values.cluster.edgeLabels }}
             - --connector-public-addresses={{ join "," .Values.cluster.connectorPublicAddresses }}
-            - --connector-subnets={{ .Values.cluster.serviceClusterIPRange }}
-            - --endpoint-id-format=C=CN, O=fabedge.io, CN={node}
-            - --agent-masq-outgoing={{ .Values.operator.masqOutgoing }}
-            {{- $enableProxy := false -}}
-            {{- range $index, $crd := (lookup "apiextensions.k8s.io/v1" "CustomResourceDefinition" "" "").items -}}
-              {{- if eq $crd.metadata.name "devices.devices.kubeedge.io" -}}
-                {{- $enableProxy = true -}}
-              {{- end -}}
+            - --connector-subnets={{ join "," .Values.cluster.serviceClusterIPRange }}
+            {{- if gt (int .Values.operator.replicas) 1 }}
+            - --leader-election=true
             {{- end }}
-            - --agent-enable-proxy={{ $enableProxy }}
-            - -v=5
+            - -v={{ .Values.operator.logLevel }}
+          env:
+          {{- range $key, $value := .Values.agent.args }}
+            - name: AGENT_ARG_{{ $key }}
+              value: {{ $value | quote }}
+          {{- end }}
           {{- if eq .Values.cluster.role "host" }}
           ports:
             - containerPort: 3030
@@ -90,5 +108,5 @@ spec:
             path: tls.crt
           - key: tls.key
             path: tls.key
-          secretName: api-server-tls
+          secretName: {{ include "operator.tlsName" . | quote }}
       {{- end }}

@@ -1,4 +1,4 @@
-{{- if eq .Values.serviceHub.mode "server" }}
+{{- if (and .Values.fabDNS.create (eq (include "serviceHub.mode" .) "server" )) }}
 ---
 apiVersion: v1
 kind: Service

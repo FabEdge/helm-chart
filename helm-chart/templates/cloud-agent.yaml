@@ -28,7 +28,7 @@ spec:
       containers:
         - args:
             - --connector-node-addresses={{ include "connector.node.addresses" . }}
-            - -v=5
+            - -v={{ .Values.cloudAgent.logLevel }}
           image: {{ .Values.cloudAgent.image.repository }}:{{ .Values.cloudAgent.image.tag | default .Chart.AppVersion }}
           imagePullPolicy: {{ .Values.cloudAgent.image.pullPolicy }}
           name: {{ .Values.cloudAgent.name }}
