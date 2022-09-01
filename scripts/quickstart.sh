@@ -17,7 +17,8 @@ function usage() {
     echo "  --cni-type <string>: Specify the CNI used in your cluster, only flannel and calico is supported at present"
     echo "  --edge-pod-cidr <string>: Specify range of IPv4 addresses for the edge pod. If set, fabedge-operator will automatically allocate CIDRs for every edge node, configure this when you use calico and want to use IPv4"
     echo "  --edge-cidr-mask-size <string>: Set the mask size for IPv4 edge node cidr in dual-stack cluster, default: 24"
-    echo "  --service-cluster-ip-range <string>: CIDR used by service in the cluster"
+    echo "  --cluster-cidr <string>: The value of cluster-cidr parameter of kubernetes cluster"
+    echo "  --service-cluster-ip-range <string>: The value of service-cluster-ip-range parameter of kubernetes cluster"
     echo "  --edges []: The name list of edge nodes, comma seperated, e.g. edge1,edge2"
     echo "  --connectors []: The name of node on which connection will run, comma seperated, e.g. node1,node2"
     echo "  --connector-public-addresses []: public IP addresses of connector which should be accessible by the edge nodes"
@@ -50,6 +51,35 @@ function getCNIType() {
   done
 }
 
+function getClusterCIDR() {
+  if [ "${KUBERNETES_PROVIDER}" == "k3s" ]; then
+      getK3sClusterCIDR
+  else
+      clusterCIDR=$(grep -r "cluster-cidr=" /etc/kubernetes/ | awk -F '=' 'END{print $NF}')
+  fi
+}
+
+function getK3sClusterCIDR() {
+    # 10.42.0.0/16 is the default cluster-cidr of k3s
+    clusterCIDR=10.42.0.0/16
+    while read line
+    do
+       if [[ $line == ExecStart=* ]];
+       then
+           args=($line)
+           for i in "${!args[@]}";
+           do
+               key=$(echo ${args[$i]} | sed 's/\"//g' | sed $'s/\'//g')
+               if [[ $key == "--cluster-cidr" ]];
+               then
+                   let i++
+                   clusterCIDR=$(echo ${args[$i]} | sed 's/\"//g' | sed $'s/\'//g')
+               fi
+           done
+       fi
+    done < /etc/systemd/system/k3s.service
+}
+
 function getServiceClusterIPRange() {
   if [ "${KUBERNETES_PROVIDER}" == "k3s" ]; then
       getK3sServiceClusterIPRange
@@ -59,6 +89,8 @@ function getServiceClusterIPRange() {
 }
 
 function getK3sServiceClusterIPRange() {
+    # 10.43.0.0/16 is the default service-cluster-ip-range of k3s
+    serviceClusterIPRange=10.43.0.0/16
     while read line
     do
        if [[ $line == ExecStart=* ]];
@@ -92,12 +124,16 @@ function setDefaultArgs() {
     fi
 
     if [ x"$enableProxy" == x ]; then
-      name=$(kubectl get ns kubeedge | grep kubeedge | awk '{ print $1 }')
+      name=$(kubectl get ns kubeedge 2>/dev/null | grep kubeedge | awk '{ print $1 }')
       if [ x"$name" == x"kubeedge" ]; then
         enableProxy=true
       else
         enableProxy=false
       fi
+    fi
+
+    if [ x"$clusterCIDR" = x"" ]; then
+        getClusterCIDR
     fi
 
     if [ x"$serviceClusterIPRange" = x"" ]; then
@@ -116,8 +152,8 @@ function validateArgs() {
         error=1
         echo "couldn't recognize CNI in current cluster, please provide cni using --cni-type your-cni-type"
     elif [ x"$cniType" == x"calico" ] && [ x"$edgePodCIDR" == x ]; then
-          error=1
-          echo 'required option "--edge-pod-cidr" not set'
+        error=1
+        echo 'required option "--edge-pod-cidr" not set'
     fi
 
     if [ x"$clusterRole" == x ]; then
@@ -127,22 +163,32 @@ function validateArgs() {
         error=1
         echo "invalid option value: --cluster-role $clusterRole: must be one of 'host' and 'member'"
     fi
+
     if [ x"$clusterRegion" == x ]; then
         error=1
         echo 'required option "--cluster-region" not set'
     fi
+
     if [ x"$clusterZone" == x ]; then
         error=1
         echo 'required option "--cluster-zone" not set'
     fi
+
+    if [ x"$clusterCIDR" = x"" ]; then
+        error=1
+        echo 'required option "--cluster-cidr" not set'
+    fi
+
     if [ x"$serviceClusterIPRange" = x"" ]; then
         error=1
         echo 'required option "--service-cluster-ip-range" not set'
     fi
+
     if [ x"$connectors" == x ]; then
         error=1
         echo 'required option "--connectors" not set'
     fi
+
     if [ x"$connectorPublicAddresses" == x ]; then
         error=1
         echo 'required option "--connector-public-addresses" not set'
@@ -176,6 +222,7 @@ function validateArgs() {
             echo 'required option "--servicehub-nodeport" not set'
         fi
     fi
+
     if [ $error == 1 ]; then
         exit
     fi
@@ -221,6 +268,10 @@ function parseArgs() {
                 ;;
             --edge-cidr-mask-size)
                 edgeCIDRMaskSize=$2
+                shift 2
+                ;;
+            --cluster-cidr)
+                clusterCIDR=($(echo $2 | sed 's/,/ /g'))
                 shift 2
                 ;;
             --service-cluster-ip-range)
@@ -396,6 +447,7 @@ deployFabEdge() {
     valuesConnectorPublicAddresses=$(helmArray ${connectorPublicAddresses[*]})
     valuesConnectorNodeAddresses=$(helmArray ${connectorNodeAddresses[*]})
     valuesServiceClusterIPRange=$(helmArray ${serviceClusterIPRange[*]})
+    valuesClusterCIDR=$(helmArray ${clusterCIDR[*]})
 
     if [ x"$clusterRole" == x"host" ]; then
         helm install fabedge $chart \
@@ -408,6 +460,7 @@ deployFabEdge() {
           --set cluster.cniType=$cniType \
           --set cluster.edgePodCIDR=$edgePodCIDR \
           --set cluster.edgeCIDRMaskSize=$edgeCIDRMaskSize \
+          --set cluster.clusterCIDR=$valuesClusterCIDR \
           --set cluster.serviceClusterIPRange=$valuesServiceClusterIPRange \
           --set cluster.connectorPublicAddresses=$valuesConnectorPublicAddresses \
           --set cluster.connectorNodeAddresses=$valuesConnectorNodeAddresses \
@@ -426,6 +479,7 @@ deployFabEdge() {
           --set cluster.cniType=$cniType \
           --set cluster.edgePodCIDR=$edgePodCIDR \
           --set cluster.edgeCIDRMaskSize=$edgeCIDRMaskSize \
+          --set cluster.clusterCIDR=$valuesClusterCIDR \
           --set cluster.serviceClusterIPRange=$valuesServiceClusterIPRange \
           --set cluster.connectorPublicAddresses=$valuesConnectorPublicAddresses \
           --set cluster.connectorNodeAddresses=$valuesConnectorNodeAddresses \

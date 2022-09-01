@@ -24,6 +24,7 @@ spec:
           args:
             - --cluster={{ .Values.cluster.name }}
             - --cluster-role={{ .Values.cluster.role }}
+            - --cluster-cidr={{ join "," .Values.cluster.clusterCIDR }}
             {{- if .Values.operator.endpointIDFormat }}
             - --endpoint-id-format={{ .Values.operator.endpointIDFormat }}
             {{- end }}
