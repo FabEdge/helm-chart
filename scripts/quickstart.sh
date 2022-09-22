@@ -24,7 +24,8 @@ function usage() {
     echo "  --connector-public-addresses []: public IP addresses of connector which should be accessible by the edge nodes"
     echo "  --connector-node-addresses []: the internal IP addresses of connector nodes, prefer IPv4."
     echo "  --enable-proxy <bool>: whether use fab-proxy on edge node, if the cluster has kubeedge, it's better set it to true"
-    echo "  --enable-fabdns <bool>: whether use fabDNS, set it to true if you need it"
+    echo "  --enable-fabdns <bool>: whether use fabDNS, set it to true if you need it. Default: true."
+    echo "  --auto-keep-ippools <bool>: whether let fabedge-operator to keep ippools, this will save you from manually configuring ippools of CIDRs of other clusters. Default: true"
     echo "  --chart <string>"
     echo "host options:"
     echo "  --operator-nodeport <int>: default: 30303"
@@ -115,6 +116,7 @@ function setDefaultArgs() {
     operatorNodePort=${operatorNodePort:-30303}
     serviceHubNodePort=${serviceHubNodePort:-30304}
     enableFabDNS=${enableFabDNS:-true}
+    autoKeepIPPools=${autoKeepIPPools:-true}
     if [ x"$cniType" == x ]; then
       getCNIType
     fi
@@ -302,6 +304,10 @@ function parseArgs() {
                 enableFabDNS=$2
                 shift 2
                 ;;
+            --auto-keep-ippools)
+                autoKeepIPPools=$2
+                shift 2
+                ;;
             --operator-api-server)
                 operatorAPIServer=$2
                 shift 2
@@ -470,6 +476,7 @@ deployFabEdge() {
           --set cluster.connectorPublicAddresses=$valuesConnectorPublicAddresses \
           --set cluster.connectorNodeAddresses=$valuesConnectorNodeAddresses \
           --set operator.service.nodePort=$operatorNodePort \
+          --set operator.autoKeepIPPools=$autoKeepIPPools \
           --set serviceHub.service.nodePort=$serviceHubNodePort \
           --set agent.args.ENABLE_PROXY=$enableProxy \
           --set fabDNS.create=$enableFabDNS
@@ -489,6 +496,7 @@ deployFabEdge() {
           --set cluster.connectorPublicAddresses=$valuesConnectorPublicAddresses \
           --set cluster.connectorNodeAddresses=$valuesConnectorNodeAddresses \
           --set cluster.operatorAPIServer=$operatorAPIServer \
+          --set operator.autoKeepIPPools=$autoKeepIPPools \
           --set cluster.serviceHubAPIServer=$serviceHubAPIServer \
           --set cluster.initToken=$initToken \
           --set agent.args.ENABLE_PROXY=$enableProxy \

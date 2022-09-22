@@ -63,6 +63,7 @@ spec:
             {{- if gt (int .Values.operator.replicas) 1 }}
             - --leader-election=true
             {{- end }}
+            - --auto-keep-ippools={{ .Values.operator.autoKeepIPPools }}
             - -v={{ .Values.operator.logLevel }}
           env:
           {{- range $key, $value := .Values.agent.args }}
