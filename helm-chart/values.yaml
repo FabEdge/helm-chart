@@ -22,7 +22,9 @@ cluster:
   # Set the mask size for IPv6 edge node cidr in dual-stack cluster
   edgeCIDRMaskSize6: 64
 
-  # CIDR used by service in the cluster
+  # The value of cluster-cidr parameter of kubernetes cluster
+  clusterCIDR: []
+  # The value of service-cluster-ip-range parameter of kubernetes cluster
   serviceClusterIPRange: []
 
   # public IP addresses of connector accessible by the edge node
