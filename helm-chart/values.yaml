@@ -59,6 +59,9 @@ operator:
     # Overrides the image tag whose default is the chart appVersion.
     tag:  ""
 
+  # Let operator manage calico ippool, this will save you from manually configuring ippools of CIDRs of other clusters
+  autoKeepIPPools: true
+
   service:
     nodePort: 30303
 
