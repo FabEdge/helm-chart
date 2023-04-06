@@ -401,13 +401,10 @@ function labelEdgeNodes() {
     done
 }
 
-function patchCNINodeAffinity() {
-    echo "patching Edge NodeAffinity to $cniType work nodes..."
-    if  [ "${KUBERNETES_PROVIDER}" == "k3s" ]; then
-        return
-    fi
-
-cat > /tmp/cni-ds.patch.yaml << EOF
+generatePatchFile() {
+    filename=$(mktemp)
+    if [ x$arch == x ]; then
+        cat > $filename << EOF
 spec:
   template:
     spec:
@@ -423,8 +420,39 @@ spec:
               - key: node-role.kubernetes.io/edge
                 operator: DoesNotExist
 EOF
+    else
+        cat > $filename << EOF
+spec:
+  template:
+    spec:
+      affinity:
+        nodeAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            nodeSelectorTerms:
+            - matchExpressions:
+              - key: kubernetes.io/os
+                operator: In
+                values:
+                - linux
+              - key: kubernetes.io/arch
+                operator: In
+                values:
+                - ${arch}
+              - key: node-role.kubernetes.io/edge
+                operator: DoesNotExist
+EOF
+ fi
+ echo $filename
+}
 
-    cniNamespace=$(kubectl get ds -A | grep $cniType | awk '{ print $1 }')
+
+function patchCNINodeAffinity() {
+    echo "patching Edge NodeAffinity to $cniType work nodes..."
+    if  [ "${KUBERNETES_PROVIDER}" == "k3s" ]; then
+        return
+    fi
+
+    cniNamespace=$(kubectl get ds -A | grep $cniType | awk '{ print $1 }' | uniq)
     if [ x"$cniNamespace" == x ]; then
       cniNamespace=kube-system
     fi
@@ -432,8 +460,10 @@ EOF
     found="false"
     for name in $(kubectl get ds -n $cniNamespace | awk '{ print $1 }')
     do
-      if [[ $name =~ ^(kube-flannel(-ds)?|calico-node)$ ]]; then
-          kubectl patch ds -n $cniNamespace $name --patch "$(cat /tmp/cni-ds.patch.yaml)"
+      if [[ $name =~ ^(kube-flannel(-ds(-[a-zA-Z0-9]+)?)?|calico-node)$ ]]; then
+          arch=${name:16:10}
+          filename=$(generatePatchFile $arch)
+          kubectl patch ds -n $cniNamespace $name --patch "$(cat $filename)"
           found="true"
       fi
     done
