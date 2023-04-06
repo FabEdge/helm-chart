@@ -60,6 +60,10 @@ spec:
             - --edge-labels={{ join "," .Values.cluster.edgeLabels }}
             - --connector-public-addresses={{ join "," .Values.cluster.connectorPublicAddresses }}
             - --connector-subnets={{ join "," .Values.cluster.serviceClusterIPRange }}
+            {{- if not (eq (int .Values.cluster.connectorPublicPort)  500) }}
+            - --connector-public-port={{ .Values.cluster.connectorPublicPort }}
+            {{- end }}
+            - --connector-as-mediator={{ .Values.cluster.connectorAsMediator }}
             {{- if gt (int .Values.operator.replicas) 1 }}
             - --leader-election=true
             {{- end }}

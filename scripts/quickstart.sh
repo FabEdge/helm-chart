@@ -22,8 +22,11 @@ function usage() {
     echo "  --edges []: The name list of edge nodes, comma seperated, e.g. edge1,edge2"
     echo "  --connectors []: The name of node on which connection will run, comma seperated, e.g. node1,node2"
     echo "  --connector-public-addresses []: public IP addresses of connector which should be accessible by the edge nodes"
+    echo "  --connector-public-port: public port of connector which used by edge nodes to establish tunnel"
+    echo "  --connector-as-mediator: whether use connector as mediator for hole punching"
     echo "  --connector-node-addresses []: the internal IP addresses of connector nodes, prefer IPv4."
-    echo "  --enable-proxy <bool>: whether use fab-proxy on edge node, if the cluster has kubeedge, it's better set it to true"
+    echo "  --enable-proxy <bool>: whether use kube-proxy on edge node, if the cluster has kubeedge, it's better set it to true"
+    echo "  --enable-dns <bool>: whether use coredns on edge node, if the cluster has kubeedge, it's better set it to true"
     echo "  --enable-fabdns <bool>: whether use fabDNS, set it to true if you need it. Default: true."
     echo "  --auto-keep-ippools <bool>: whether let fabedge-operator to keep ippools, this will save you from manually configuring ippools of CIDRs of other clusters. Default: true"
     echo "  --chart <string>"
@@ -125,12 +128,29 @@ function setDefaultArgs() {
         connectorNodeAddresses=()
     fi
 
+    if [ x"$connectorPublicPort" == x ]; then
+        connectorPublicPort=500
+    fi
+
+    if [ x"$connectorAsMediator" == x ]; then
+        connectorAsMediator=false
+    fi
+
     if [ x"$enableProxy" == x ]; then
       name=$(kubectl get ns kubeedge 2>/dev/null | grep kubeedge | awk '{ print $1 }')
       if [ x"$name" == x"kubeedge" ]; then
         enableProxy=true
       else
         enableProxy=false
+      fi
+    fi
+
+    if [ x"$enableDNS" == x ]; then
+      name=$(kubectl get ns kubeedge 2>/dev/null | grep kubeedge | awk '{ print $1 }')
+      if [ x"$name" == x"kubeedge" ]; then
+        enableDNS=true
+      else
+        enableDNS=false
       fi
     fi
 
@@ -292,12 +312,24 @@ function parseArgs() {
                 connectorPublicAddresses=($(echo $2 | sed 's/,/ /g'))
                 shift 2
                 ;;
+            --connector-public-port)
+                connectorPublicPort=$2
+                shift 2
+                ;;
             --connector-node-addresses)
                 connectorNodeAddresses=($(echo $2 | sed 's/,/ /g'))
                 shift 2
                 ;;
+            --connector-as-mediator)
+                connectorAsMediator=$2
+                shift 2
+                ;;
             --enable-proxy)
                 enableProxy=$2
+                shift 2
+                ;;
+            --enable-dns)
+                enableDNS=$2
                 shift 2
                 ;;
             --enable-fabdns)
@@ -504,12 +536,15 @@ deployFabEdge() {
           --set cluster.clusterCIDR=$valuesClusterCIDR \
           --set cluster.serviceClusterIPRange=$valuesServiceClusterIPRange \
           --set cluster.connectorPublicAddresses=$valuesConnectorPublicAddresses \
+          --set cluster.connectorPublicPort=$connectorPublicPort \
           --set cluster.connectorNodeAddresses=$valuesConnectorNodeAddresses \
+          --set cluster.connectorAsMediator=$connectorAsMediator \
           --set operator.service.nodePort=$operatorNodePort \
           --set operator.autoKeepIPPools=$autoKeepIPPools \
           --set serviceHub.service.nodePort=$serviceHubNodePort \
           --set agent.args.ENABLE_PROXY=$enableProxy \
-          --set fabDNS.create=$enableFabDNS
+          --set agent.args.ENABLE_DNS=$enableDNS \
+          --set fabDNS.create=$enableFabDNS 
     elif [ x"$clusterRole" == x"member" ]; then
         helm install fabedge $chart \
           --create-namespace \
@@ -524,12 +559,15 @@ deployFabEdge() {
           --set cluster.clusterCIDR=$valuesClusterCIDR \
           --set cluster.serviceClusterIPRange=$valuesServiceClusterIPRange \
           --set cluster.connectorPublicAddresses=$valuesConnectorPublicAddresses \
+          --set cluster.connectorPublicPort=$connectorPublicPort \
           --set cluster.connectorNodeAddresses=$valuesConnectorNodeAddresses \
+          --set cluster.connectorAsMediator=$connectorAsMediator \
           --set cluster.operatorAPIServer=$operatorAPIServer \
           --set operator.autoKeepIPPools=$autoKeepIPPools \
           --set cluster.serviceHubAPIServer=$serviceHubAPIServer \
           --set cluster.initToken=$initToken \
           --set agent.args.ENABLE_PROXY=$enableProxy \
+          --set agent.args.ENABLE_DNS=$enableDNS \
           --set fabDNS.create=$enableFabDNS
     fi
 }
