@@ -32,6 +32,11 @@ cluster:
   # the internal IP addresses of connector nodes, prefer IPv4.
   connectorNodeAddresses: []
 
+  # The public port which used by edge nodes to establish VPN tunnel
+  connectorPublicPort: 500
+  # Use connector as mediator for hole punching
+  connectorAsMediator: false
+
   # The addresses will be used generate TLS certificates used by operator server and service hub server.
   # Provide it if your cluster is host cluster. When publicAddresses is empty, we use connector's public addresses
   publicAddresses: []
@@ -141,8 +146,10 @@ agent:
     LOG_LEVEL: "3"
     # Configure faberge networking to perform outbound NAT for connections from pods to outside of the cluster
     MASQ_OUTGOING: "true"
-    # Enable the proxy feature
+    # Enable the proxy component
     ENABLE_PROXY: "false"
+    # Enable the coredns component
+    ENABLE_DNS: "false"
     # ENABLE_HAIRPINMODE: "true"
     # Enable auto-networking which will find endpoints in the same LAN
     # AUTO_NETWORKING: "false"
