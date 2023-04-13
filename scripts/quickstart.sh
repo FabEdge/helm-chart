@@ -477,9 +477,33 @@ EOF
  echo $filename
 }
 
+function patchKubeProxyIfKubeEdgeExists() {
+    name=$(kubectl get ns kubeedge 2>/dev/null | grep kubeedge | awk '{ print $1 }')
+    if [ x"$name" == x"kubeedge" ]; then
+        echo "patching edge node affinity to kube-system/kube-proxy daemonset" 
+        filename=$(mktemp)
+        cat > $filename << EOF
+spec:
+  template:
+    spec:
+      affinity:
+        nodeAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            nodeSelectorTerms:
+            - matchExpressions:
+              - key: kubernetes.io/os
+                operator: In
+                values:
+                - linux
+              - key: node-role.kubernetes.io/edge
+                operator: DoesNotExist
+EOF
+        kubectl patch ds kube-proxy -n kube-system --patch "$(cat $filename)"
+    fi
+}
 
 function patchCNINodeAffinity() {
-    echo "patching Edge NodeAffinity to $cniType work nodes..."
+    echo "patching edge node affinity to $cniType work nodes..."
     if  [ "${KUBERNETES_PROVIDER}" == "k3s" ]; then
         return
     fi
@@ -544,7 +568,7 @@ deployFabEdge() {
           --set serviceHub.service.nodePort=$serviceHubNodePort \
           --set agent.args.ENABLE_PROXY=$enableProxy \
           --set agent.args.ENABLE_DNS=$enableDNS \
-          --set fabDNS.create=$enableFabDNS 
+          --set fabDNS.create=$enableFabDNS
     elif [ x"$clusterRole" == x"member" ]; then
         helm install fabedge $chart \
           --create-namespace \
@@ -580,4 +604,5 @@ installHelm
 labelEdgeNodes
 labelConnectorNodes
 patchCNINodeAffinity
+patchKubeProxyIfKubeEdgeExists
 deployFabEdge
