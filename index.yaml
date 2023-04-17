@@ -1,0 +1,146 @@
+apiVersion: v1
+entries:
+  fabedge:
+  - apiVersion: v2
+    appVersion: v0.7.0
+    created: "2023-04-17T11:08:12.364600922+08:00"
+    description: FabEdge is an open source edge networking solution based on kubernetes.
+    digest: 3a8f6856a403f68824c6149a54c655518e4a527787706d545ca515c76a1648ae
+    home: http://www.fabedge.io
+    keywords:
+    - fabedge
+    - network
+    - edge
+    maintainers:
+    - email: fabedge@beyondcent.com
+      name: fabedge
+    name: fabedge
+    sources:
+    - https://github.com/FabEdge/fabedge
+    type: application
+    urls:
+    - https://fabedge.github.io/helm-chart/fabedge-0.7.0.tgz
+    version: 0.7.0
+  - apiVersion: v2
+    appVersion: v0.6.0
+    created: "2023-04-17T11:08:12.343288424+08:00"
+    description: FabEdge is an open source edge networking solution based on kubernetes.
+    digest: 9886e67f501f1d77ab8de4627e89fc04f5c186e53c6e8c8e8b6b55d3830f9f27
+    home: http://www.fabedge.io
+    keywords:
+    - fabedge
+    - network
+    - edge
+    maintainers:
+    - email: fabedge@beyondcent.com
+      name: fabedge
+    name: fabedge
+    sources:
+    - https://github.com/FabEdge/fabedge
+    type: application
+    urls:
+    - https://fabedge.github.io/helm-chart/fabedge-0.6.0.tgz
+    version: 0.6.0
+  - apiVersion: v2
+    appVersion: v0.5.0
+    created: "2023-04-17T11:08:12.342684335+08:00"
+    description: FabEdge is an open source edge networking solution based on kubernetes.
+    digest: 37224e0940710b76ddb35ac480a40c038815ff333a3881fe72da2fcd6bfc40e6
+    home: http://www.fabedge.io
+    keywords:
+    - fabedge
+    - network
+    - edge
+    maintainers:
+    - email: fabedge@beyondcent.com
+      name: fabedge
+    name: fabedge
+    sources:
+    - https://github.com/FabEdge/fabedge
+    type: application
+    urls:
+    - https://fabedge.github.io/helm-chart/fabedge-0.5.0.tgz
+    version: 0.5.0
+  - apiVersion: v2
+    appVersion: v0.4.0
+    created: "2023-04-17T11:08:12.342152377+08:00"
+    description: FabEdge is an open source edge networking solution based on kubernetes.
+    digest: 9f577b0aa18a22c31d19c384699c38acee3d827cc186217e21d7e26dbdd7a2d7
+    home: http://www.fabedge.io
+    keywords:
+    - fabedge
+    - network
+    - edge
+    maintainers:
+    - email: fabedge@beyondcent.com
+      name: fabedge
+    name: fabedge
+    sources:
+    - https://github.com/FabEdge/fabedge
+    type: application
+    urls:
+    - https://fabedge.github.io/helm-chart/fabedge-0.4.0.tgz
+    version: 0.4.0
+  - apiVersion: v2
+    appVersion: v0.3
+    created: "2023-04-17T11:08:12.341677848+08:00"
+    description: FabEdge is an open source edge networking solution based on kubernetes.
+    digest: c6a395cd78a4abade33b90952c8989153b4e465ede93acf37cef4f134cefa074
+    home: http://www.fabedge.io
+    keywords:
+    - fabedge
+    - network
+    - edge
+    maintainers:
+    - email: fabedge@beyondcent.com
+      name: fabedge
+    name: fabedge
+    sources:
+    - https://github.com/FabEdge/fabedge
+    type: application
+    urls:
+    - https://fabedge.github.io/helm-chart/fabedge-0.3.0.tgz
+    version: 0.3.0
+  - apiVersion: v2
+    appVersion: v0.2
+    created: "2023-04-17T11:08:12.3413131+08:00"
+    description: FabEdge is an open source edge networking solution based on kubernetes
+      and kubeedge.
+    digest: e469ea46c74ddcef68108135b953cdfe229f4350c1431f33a096eda3a51cdb98
+    home: https://www.fabedge.io
+    keywords:
+    - fabedge
+    - network
+    - edge
+    maintainers:
+    - email: fabedge@beyondcent.com
+      name: fabedge
+    name: fabedge
+    sources:
+    - http://github.com/FabEdge/fabedge
+    type: application
+    urls:
+    - https://fabedge.github.io/helm-chart/fabedge-0.2.0.tgz
+    version: 0.2.0
+  - apiVersion: v2
+    appVersion: v0.2.beta
+    created: "2023-04-17T11:08:12.340897965+08:00"
+    description: FabEdge is an open source edge networking solution based on kubernetes
+      and kubeedge.
+    digest: c39e39cc17d6c7ca6db8afdcba516435de3c29a18e0fa509a2b854ab4755cc7f
+    home: https://www.fabedge.io
+    keywords:
+    - fabedge
+    - network
+    - edge
+    maintainers:
+    - email: fabedge@beyondcent.com
+      name: fabedge
+    name: fabedge
+    sources:
+    - http://github.com/FabEdge/fabedge
+    type: application
+    urls:
+    - https://fabedge.github.io/helm-chart/fabedge-0.0.1.tgz
+    version: 0.0.1
+generated: "2023-04-17T11:08:12.340379216+08:00"
