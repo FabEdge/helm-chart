@@ -197,16 +197,22 @@ fabDNS:
   # set to true to create serviceHub and fabDNS
   create: false
   name: fabdns
+
   replicas: 1
+
   image:
     repository: fabedge/fabdns
     pullPolicy: IfNotPresent
     tag: v0.3.0
+
   strategy:
     type: RollingUpdate
     rollingUpdate:
       maxSurge: 25%
       maxUnavailable: 1
+
+  service:
+    clusterIP: ""
 
 serviceHub:
   name: service-hub

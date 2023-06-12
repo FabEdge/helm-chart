@@ -8,6 +8,9 @@ spec:
   selector:
     {{- include "fabDNS.labels" . | nindent 4 }}
   type: ClusterIP
+  {{- if .Values.fabDNS.service.clusterIP }}
+  clusterIP: {{ .Values.fabDNS.service.clusterIP }}
+  {{- end }}
   ports:
     - name: dns-udp
       protocol: UDP
