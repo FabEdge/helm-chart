@@ -203,7 +203,7 @@ fabDNS:
   image:
     repository: fabedge/fabdns
     pullPolicy: IfNotPresent
-    tag: v0.3.0
+    tag: v0.3.1
 
   strategy:
     type: RollingUpdate
@@ -231,7 +231,7 @@ serviceHub:
   image:
     repository: fabedge/service-hub
     pullPolicy: IfNotPresent
-    tag: v0.3.0
+    tag: v0.3.1
 
   service:
     nodePort: 30000
