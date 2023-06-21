@@ -32,6 +32,7 @@ function usage() {
     echo "  --chart <string>"
     echo "host options:"
     echo "  --operator-nodeport <int>: default: 30303"
+    echo "  --fandns-cluster-ip <string>: Specify the clusterIP for fabdns service"
     echo "  --servicehub-nodeport <int>: default: 30304"
     echo "member options:"
     echo "  --operator-api-server <string>"
@@ -356,6 +357,10 @@ function parseArgs() {
                 operatorNodePort=$2
                 shift 2
                 ;;
+            --fabdns-cluster-ip)
+                fabDNSClusterIP=$2
+                shift 2
+                ;;
             --servicehub-nodeport)
                 serviceHubNodePort=$2
                 shift 2
@@ -568,7 +573,8 @@ deployFabEdge() {
           --set serviceHub.service.nodePort=$serviceHubNodePort \
           --set agent.args.ENABLE_PROXY=$enableProxy \
           --set agent.args.ENABLE_DNS=$enableDNS \
-          --set fabDNS.create=$enableFabDNS
+          --set fabDNS.create=$enableFabDNS \
+          --set fabDNS.service.clusterIP=$fabDNSClusterIP
     elif [ x"$clusterRole" == x"member" ]; then
         helm install fabedge $chart \
           --create-namespace \
@@ -592,7 +598,8 @@ deployFabEdge() {
           --set cluster.initToken=$initToken \
           --set agent.args.ENABLE_PROXY=$enableProxy \
           --set agent.args.ENABLE_DNS=$enableDNS \
-          --set fabDNS.create=$enableFabDNS
+          --set fabDNS.create=$enableFabDNS \
+          --set fabDNS.service.clusterIP=$fabDNSClusterIP
     fi
 }
 
