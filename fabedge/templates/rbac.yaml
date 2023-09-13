@@ -71,12 +71,36 @@ rules:
       - ippools
     verbs:
       - '*'
+
+---
+
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: {{ .Values.connector.name }}
+  namespace: {{ .Release.Namespace }}
+rules:
+  - apiGroups:
+      - coordination.k8s.io
+    resources:
+      - leases
+    verbs:
+      - '*'
+
 ---
 
 apiVersion: v1
 kind: ServiceAccount
 metadata:
   name: {{ .Values.operator.name }}
+  namespace: {{ .Release.Namespace }}
+
+---
+
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: {{ .Values.connector.name }}
   namespace: {{ .Release.Namespace }}
 
 ---
@@ -93,3 +117,18 @@ subjects:
   - kind: ServiceAccount
     name: {{ .Values.operator.name }}
     namespace: {{ .Release.Namespace }}
+
+---
+
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: {{ .Values.connector.name }}
+  namespace: {{ .Release.Namespace }}
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: {{ .Values.connector.name }}
+subjects:
+  - kind: ServiceAccount
+    name: {{ .Values.connector.name }}

@@ -6,7 +6,7 @@ metadata:
   labels:
     {{- include "connector.labels" . | nindent 4 }}
 spec:
-  replicas: 1
+  replicas: {{ .Values.connector.replicas }}
   selector:
     matchLabels:
       {{- include "connector.labels" . | nindent 6 }}
@@ -19,6 +19,7 @@ spec:
       labels:
         {{- include "connector.labels" . | nindent 8 }}
     spec:
+      serviceAccountName: {{ .Values.connector.name }}
       affinity:
         nodeAffinity:
           requiredDuringSchedulingIgnoredDuringExecution:
@@ -74,9 +75,20 @@ spec:
           imagePullPolicy: {{ .Values.connector.image.pullPolicy }}
           args:
             - --cni-type={{ include "cniType" . }}
-            - --sync-period={{ .Values.connector.syncPeriod }}
             - --connector-node-addresses={{ include "connector.node.addresses" . }}
+            - --sync-period={{ .Values.connector.syncPeriod }}
             - -v={{ .Values.connector.logLevel }}
+          env:
+            - name: NAMESPACE
+              valueFrom:
+                fieldRef:
+                  apiVersion: v1
+                  fieldPath: metadata.namespace
+            - name: POD_NAME
+              valueFrom:
+                fieldRef:
+                  apiVersion: v1
+                  fieldPath: metadata.name
           volumeMounts:
             - name: var-run
               mountPath: /var/run/
