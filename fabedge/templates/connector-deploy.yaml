@@ -68,9 +68,6 @@ spec:
             {{- toYaml .Values.strongswan.resources | nindent 12 }}
           {{- end }}
         - name: connector
-          securityContext:
-            capabilities:
-              add: ["NET_ADMIN"]
           image: {{ .Values.connector.image.repository }}:{{ .Values.connector.image.tag | default .Chart.AppVersion }}
           imagePullPolicy: {{ .Values.connector.image.pullPolicy }}
           args:
@@ -89,6 +86,9 @@ spec:
                 fieldRef:
                   apiVersion: v1
                   fieldPath: metadata.name
+          securityContext:
+            capabilities:
+              add: ["NET_ADMIN"]
           volumeMounts:
             - name: var-run
               mountPath: /var/run/
@@ -101,12 +101,30 @@ spec:
           resources:
             {{- toYaml .Values.connector.resources | nindent 12 }}
           {{- end }}
+        {{- if (and .Values.keepalived.create (gt .Values.connector.replicas 1.0)) }}
+        - name: keepalived
+          image: {{ .Values.connector.image.repository }}:{{ .Values.connector.image.tag | default .Chart.AppVersion }}
+          imagePullPolicy: {{ .Values.connector.image.pullPolicy }}
+          command: ["keepalived"]
+          args:
+            - --dont-fork
+            - --log-console
+          volumeMounts:
+            - name: keepalived-config
+              mountPath: /etc/keepalived/
+          securityContext:
+            capabilities:
+              add: ["NET_ADMIN"]
+        {{- end }}
       volumes:
         - name: var-run
           emptyDir: {}
         - name: connector-config
           configMap:
             name: connector-config
+        - name: keepalived-config
+          configMap:
+            name: {{ include "keepalived.config.name" . }}
         - name: ipsec-d
           secret:
             items:

@@ -1,0 +1,32 @@
+{{- if (and .Values.keepalived.create (gt .Values.connector.replicas 1.0)) }}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "keepalived.config.name" . }}
+  namespace: {{ .Release.Namespace }}
+data:
+  keepalived.conf: |
+    vrrp_script connector-check {
+      script "/check-connector-leader.sh"
+      interval {{ .Values.keepalived.scriptInterval }}
+      weight {{ .Values.keepalived.scriptWeight }}
+      fall {{ .Values.keepalived.scriptFall }}
+      rise {{ .Values.keepalived.scriptRise }}
+    }
+
+    vrrp_instance connector {
+      state BACKUP
+      interface {{ .Values.keepalived.interface }}
+      virtual_router_id {{ .Values.keepalived.routerID }}
+      priority {{ .Values.keepalived.priority }}
+      advert_int {{ .Values.keepalived.advertInterval }}
+
+      virtual_ipaddress {
+        {{ .Values.keepalived.vip }}
+      }
+
+      track_script {
+          connector-check
+      }
+    }
+{{- end }}
