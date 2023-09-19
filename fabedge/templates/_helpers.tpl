@@ -76,3 +76,7 @@ release: {{ .Release.Name }}
     {{- join "," .Values.cluster.connectorPublicAddresses -}}
 {{- end -}}
 {{- end }}
+
+{{- define "keepalived.config.name" -}} 
+{{- .Release.Name }}-keepalived
+{{- end }}

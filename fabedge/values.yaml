@@ -102,6 +102,9 @@ connector:
     # Overrides the image tag whose default is the chart appVersion.
     tag:  ""
 
+  # when replicas is greater thant 1, this chart might deploy keepalived for you
+  replicas: 1
+
   # period to sync routes/rules
   syncPeriod: "1m"
   # number for the log level verbosity
@@ -118,6 +121,26 @@ connector:
   #  requests:
   #    cpu: 10m
   #    memory: 32Mi
+
+keepalived:
+  # Keepalived will only be created when create is true and connector's replicas
+  # is greater thant 1
+  create: true
+
+  # Parameters following are counterparts of keepalived's vrrp_instance block
+  # vip => virtual_ipaddress
+  # routerID => virtual_router_id 
+  vip: 2.2.2.2/32
+  interface: ens3
+  routerID: 51
+  advertInterval: 1
+  priority: 125
+
+  # Parameters following are counterparts of keepalived's vrrp_script block
+  scriptInterval: 3
+  scriptWeight: 2
+  scriptFall: 3
+  scriptRise: 3
 
 strongswan:
   image:
