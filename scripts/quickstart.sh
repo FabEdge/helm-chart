@@ -6,8 +6,8 @@ function usage() {
     echo "Deploy fabedge."
     echo ""
     echo "examples:"
-    echo "curl quickstart.sh  | bash -s -- --cluster-name beijing  --cluster-role host --cluster-zone beijing  --cluster-region haidian --connectors node1 --connector-public-addresses 10.22.46.32 --chart http://116.62.127.76/fabedge-0.5.0.tgz"
-    echo "curl quickstart.sh  | bash -s -- --cluster-name openyurt2 --cluster-role member --cluster-zone beijing  --cluster-region haidian --connectors node1 --chart http://116.62.127.76/fabedge-0.5.0.tgz --server-serviceHub-api-server https://10.22.46.47:30304 --host-operator-api-server https://10.22.46.47:30303 --connector-public-addresses 10.22.46.26 --init-token ey...Jh"
+    echo "curl quickstart.sh  | bash -s -- --cluster-name beijing  --cluster-role host --cluster-zone beijing  --cluster-region haidian --connectors node1 --connector-public-addresses 10.22.46.32 --chart fabedge/fabedge"
+    echo "curl quickstart.sh  | bash -s -- --cluster-name openyurt2 --cluster-role member --cluster-zone beijing  --cluster-region haidian --connectors node1 --chart fabedge/fabedge --server-serviceHub-api-server https://10.22.46.47:30000 --host-operator-api-server https://10.22.46.47:30303 --connector-public-addresses 10.22.46.26 --init-token ey...Jh"
     echo ""
     echo "common options:"
     echo "  --cluster-name <string>: The name of cluster, must be unique among all clusters and be a valid dns name(RFC 1123)"
@@ -16,24 +16,30 @@ function usage() {
     echo "  --cluster-zone <string>: The zone where the cluster is located, a zone name may contain the letters ‘a-z’ or ’A-Z’ or digits 0-9"
     echo "  --cni-type <string>: Specify the CNI used in your cluster, only flannel and calico is supported at present"
     echo "  --edge-pod-cidr <string>: Specify range of IPv4 addresses for the edge pod. If set, fabedge-operator will automatically allocate CIDRs for every edge node, configure this when you use calico and want to use IPv4"
+    echo "  --edge-pod-cidr6 <string>: Specify range of IPv6 addresses for the edge pod. If set, fabedge-operator will automatically allocate CIDRs for every edge node, configure this when you use calico and want to use IPv6"
     echo "  --edge-cidr-mask-size <string>: Set the mask size for IPv4 edge node cidr in dual-stack cluster, default: 24"
+    echo "  --edge-cidr-mask-size6 <string>: Set the mask size for IPv6 edge node cidr in dual-stack cluster, default: 120"
     echo "  --cluster-cidr <string>: The value of cluster-cidr parameter of kubernetes cluster"
     echo "  --service-cluster-ip-range <string>: The value of service-cluster-ip-range parameter of kubernetes cluster"
     echo "  --edges []: The name list of edge nodes, comma seperated, e.g. edge1,edge2"
     echo "  --connectors []: The name of node on which connection will run, comma seperated, e.g. node1,node2"
-    echo "  --connector-public-addresses []: public IP addresses of connector which should be accessible by the edge nodes"
-    echo "  --connector-public-port: public port of connector which used by edge nodes to establish tunnel"
-    echo "  --connector-as-mediator: whether use connector as mediator for hole punching"
-    echo "  --connector-node-addresses []: the internal IP addresses of connector nodes, prefer IPv4."
-    echo "  --enable-proxy <bool>: whether use kube-proxy on edge node, if the cluster has kubeedge, it's better set it to true"
-    echo "  --enable-dns <bool>: whether use coredns on edge node, if the cluster has kubeedge, it's better set it to true"
-    echo "  --enable-fabdns <bool>: whether use fabDNS, set it to true if you need it. Default: true."
-    echo "  --auto-keep-ippools <bool>: whether let fabedge-operator to keep ippools, this will save you from manually configuring ippools of CIDRs of other clusters. Default: true"
+    echo "  --connector-public-addresses []: Public IP addresses of connector which should be accessible by the edge nodes"
+    echo "  --connector-public-port: Public port of connector which used by edge nodes to establish tunnel"
+    echo "  --connector-as-mediator: Whether use connector as mediator for hole punching"
+    echo "  --connector-node-addresses []: The internal IP addresses of connector nodes, prefer IPv4."
+    echo "  --enable-proxy <bool>: Whether to use kube-proxy on edge node, if the cluster has kubeedge, it's better set it to true"
+    echo "  --enable-dns <bool>: Whether to use coredns on edge node, if the cluster has kubeedge, it's better set it to true"
+    echo "  --enable-fabdns <bool>: Whether to use fabDNS, set it to true if you need it. Default: true."
+    echo "  --auto-keep-ippools <bool>: Whether to let fabedge-operator to keep ippools, this will save you from manually configuring ippools of CIDRs of other clusters. Default: true"
+    echo "  --enable-keepalived <bool>: Whether to use keepalived and run connector in high availability mode."
+    echo "  --keepalived-vip: The VIP address used to by connector nodes"
+    echo "  --keepalived-interface: The interface to be assigned keepalived VIP"
+    echo "  --keepalived-router-id: The router id for keepalived to use. Default: 51"
     echo "  --chart <string>"
     echo "host options:"
     echo "  --operator-nodeport <int>: default: 30303"
-    echo "  --fandns-cluster-ip <string>: Specify the clusterIP for fabdns service"
-    echo "  --servicehub-nodeport <int>: default: 30304"
+    echo "  --fabdns-cluster-ip <string>: Specify the clusterIP for fabdns service"
+    echo "  --servicehub-nodeport <int>: default: 30000"
     echo "member options:"
     echo "  --operator-api-server <string>"
     echo "  --service-hub-api-server <string>"
@@ -117,10 +123,14 @@ function getK3sServiceClusterIPRange() {
 function setDefaultArgs() {
     namespace=${namespace:-fabedge}
     edgeCIDRMaskSize=${edgeCIDRMaskSize:-24}
+    edgeCIDRMaskSize6=${edgeCIDRMaskSize6:-120}
     operatorNodePort=${operatorNodePort:-30303}
-    serviceHubNodePort=${serviceHubNodePort:-30304}
+    serviceHubNodePort=${serviceHubNodePort:-30000}
     enableFabDNS=${enableFabDNS:-true}
     autoKeepIPPools=${autoKeepIPPools:-true}
+    enableKeepalived=${enableKeepalived:-false}
+    keepavliedRouterID=${keepavliedRouterID:-51}
+
     if [ x"$cniType" == x ]; then
       getCNIType
     fi
@@ -246,6 +256,18 @@ function validateArgs() {
         fi
     fi
 
+    if [ "$enableKeepalived" == "yes" ]; then
+        if [ x"$keepalivedVIP" == x ]; then
+          error=1
+          echo 'You enabled keepalived, please specify the VIP for connector with option "--keepalived-vip"'
+        fi
+
+        if [ x"$keepalivedInterface" == x ]; then
+          error=1
+          echo 'You enabled keepalived, please specify the interface to assign VIP address with option "--keepalived-interface"'
+        fi
+    fi
+
     if [ $error == 1 ]; then
         exit
     fi
@@ -289,8 +311,16 @@ function parseArgs() {
                 edgePodCIDR=$2
                 shift 2
                 ;;
+            --edge-pod-cidr6)
+                edgePodCIDR6=$2
+                shift 2
+                ;;
             --edge-cidr-mask-size)
                 edgeCIDRMaskSize=$2
+                shift 2
+                ;;
+            --edge-cidr-mask-size6)
+                edgeCIDRMaskSize6=$2
                 shift 2
                 ;;
             --cluster-cidr)
@@ -363,6 +393,22 @@ function parseArgs() {
                 ;;
             --servicehub-nodeport)
                 serviceHubNodePort=$2
+                shift 2
+                ;;
+            --enable-keepalived)
+                enableKeepalived=$2
+                shift 2
+                ;;
+            --keepalived-vip)
+                keepalivedVIP=$2
+                shift 2
+                ;;
+            --keepalived-interface)
+                keepalivedInterface=$2
+                shift 2
+                ;;
+            --keepalived-router-id)
+                keepalivedRouterID=$2
                 shift 2
                 ;;
             --chart)
@@ -529,6 +575,10 @@ function patchCNINodeAffinity() {
       fi
     done
 
+    if [[ "$cniType" == "calico" ]]; then
+        kubectl patch deploy -n $cniNamespace calico-kube-controllers --patch "$(cat $filename)"
+    fi
+
     if [[ "$found" == "false" ]]; then
       echo 'Could not find calico or flannel pod'
       exit 2
@@ -551,6 +601,14 @@ deployFabEdge() {
     valuesServiceClusterIPRange=$(helmArray ${serviceClusterIPRange[*]})
     valuesClusterCIDR=$(helmArray ${clusterCIDR[*]})
 
+    connectorReplicas=1
+    if [ "$enableKeepalived" == "true" ]; then
+      connectorReplicas=0
+      for connector in ${connectors[*]}; do
+        connectorReplicas=$(($connectorReplicas+1))
+      done
+    fi
+
     if [ x"$clusterRole" == x"host" ]; then
         helm install fabedge $chart \
           --create-namespace \
@@ -561,7 +619,9 @@ deployFabEdge() {
           --set cluster.zone=$clusterZone \
           --set cluster.cniType=$cniType \
           --set cluster.edgePodCIDR=$edgePodCIDR \
+          --set cluster.edgePodCIDR6=$edgePodCIDR6 \
           --set cluster.edgeCIDRMaskSize=$edgeCIDRMaskSize \
+          --set cluster.edgeCIDRMaskSize6=$edgeCIDRMaskSize6 \
           --set cluster.clusterCIDR=$valuesClusterCIDR \
           --set cluster.serviceClusterIPRange=$valuesServiceClusterIPRange \
           --set cluster.connectorPublicAddresses=$valuesConnectorPublicAddresses \
@@ -574,7 +634,12 @@ deployFabEdge() {
           --set agent.args.ENABLE_PROXY=$enableProxy \
           --set agent.args.ENABLE_DNS=$enableDNS \
           --set fabDNS.create=$enableFabDNS \
-          --set fabDNS.service.clusterIP=$fabDNSClusterIP
+          --set fabDNS.service.clusterIP=$fabDNSClusterIP \
+          --set connector.replicas=$connectorReplicas \
+          --set keepalived.create=$enableKeepalived \
+          --set keepalived.vip=$keepalivedVIP \
+          --set keepalived.interface=$keepalivedInterface \
+          --set keepalived.routerID=$keepalivedRouterID
     elif [ x"$clusterRole" == x"member" ]; then
         helm install fabedge $chart \
           --create-namespace \
@@ -585,7 +650,9 @@ deployFabEdge() {
           --set cluster.zone=$clusterZone \
           --set cluster.cniType=$cniType \
           --set cluster.edgePodCIDR=$edgePodCIDR \
+          --set cluster.edgePodCIDR6=$edgePodCIDR6 \
           --set cluster.edgeCIDRMaskSize=$edgeCIDRMaskSize \
+          --set cluster.edgeCIDRMaskSize6=$edgeCIDRMaskSize6 \
           --set cluster.clusterCIDR=$valuesClusterCIDR \
           --set cluster.serviceClusterIPRange=$valuesServiceClusterIPRange \
           --set cluster.connectorPublicAddresses=$valuesConnectorPublicAddresses \
@@ -599,7 +666,12 @@ deployFabEdge() {
           --set agent.args.ENABLE_PROXY=$enableProxy \
           --set agent.args.ENABLE_DNS=$enableDNS \
           --set fabDNS.create=$enableFabDNS \
-          --set fabDNS.service.clusterIP=$fabDNSClusterIP
+          --set fabDNS.service.clusterIP=$fabDNSClusterIP \
+          --set connector.replicas=$connectorReplicas \
+          --set keepalived.create=$enableKeepalived \
+          --set keepalived.vip=$keepalivedVIP \
+          --set keepalived.interface=$keepalivedInterface \
+          --set keepalived.routerID=$keepalivedRouterID
     fi
 }
 

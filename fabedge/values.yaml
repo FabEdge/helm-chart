@@ -20,7 +20,7 @@ cluster:
   # Specify range of IPv6 addresses for the edge pod. If set, fabedge-operator will automatically allocate CIDRs for every edge node, configure this when you use Calico and want to use IPv6
   edgePodCIDR6: ""
   # Set the mask size for IPv6 edge node cidr in dual-stack cluster
-  edgeCIDRMaskSize6: 64
+  edgeCIDRMaskSize6: 120
 
   # The value of cluster-cidr parameter of kubernetes cluster
   clusterCIDR: []

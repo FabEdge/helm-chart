@@ -101,7 +101,7 @@ spec:
           resources:
             {{- toYaml .Values.connector.resources | nindent 12 }}
           {{- end }}
-        {{- if (and .Values.keepalived.create (gt .Values.connector.replicas 1.0)) }}
+        {{- if (and .Values.keepalived.create (gt (int .Values.connector.replicas) 1)) }}
         - name: keepalived
           image: {{ .Values.connector.image.repository }}:{{ .Values.connector.image.tag | default .Chart.AppVersion }}
           imagePullPolicy: {{ .Values.connector.image.pullPolicy }}

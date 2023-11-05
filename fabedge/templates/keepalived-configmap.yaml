@@ -1,4 +1,4 @@
-{{- if (and .Values.keepalived.create (gt .Values.connector.replicas 1.0)) }}
+{{- if (and .Values.keepalived.create (gt (int .Values.connector.replicas) 1)) }}
 apiVersion: v1
 kind: ConfigMap
 metadata:
