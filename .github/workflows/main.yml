@@ -27,20 +27,3 @@ jobs:
           fabedge-*.tgz
           scripts/get_cluster_info.sh
           scripts/quickstart.sh
-
-    - name: Copy artifacts to file server
-      run: |
-        mkdir $HOME/.ssh
-        echo "$KEY" > $HOME/.ssh/id_rsa
-        chmod 0600 $HOME/.ssh/id_rsa
-        ssh -p $PORT -o StrictHostKeyChecking=no $USERNAME@$HOST mkdir -p $STATIC_DIR/installer/latest/
-        ssh -p $PORT -o StrictHostKeyChecking=no $USERNAME@$HOST mkdir -p $STATIC_DIR/installer/${GITHUB_REF_NAME}/
-        scp -P $PORT -o StrictHostKeyChecking=no fabedge-*.tgz $USERNAME@$HOST:$STATIC_DIR
-        scp -P $PORT -o StrictHostKeyChecking=no scripts/* $USERNAME@$HOST:$STATIC_DIR/installer/latest/
-        scp -P $PORT -o StrictHostKeyChecking=no scripts/* $USERNAME@$HOST:$STATIC_DIR/installer/${GITHUB_REF_NAME}/
-      env:
-        USERNAME: ${{ secrets.SERVER_USERNAME }}
-        HOST: ${{ secrets.SERVER_HOST }}
-        PORT: ${{ secrets.SERVER_PORT }}
-        KEY: ${{ secrets.SERVER_KEY }}
-        STATIC_DIR: "/var/www/html/"
